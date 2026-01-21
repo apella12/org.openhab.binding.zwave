@@ -1104,7 +1104,6 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
 
     public boolean setNodeAsFailed() {
         if (controllerHandler.getNode(nodeId).getNodeState() != ZWaveNodeState.FAILED) {
-            controllerHandler.replaceFailedNode(nodeId);
             controllerHandler.checkNodeFailed(nodeId);
             return true;
         }
