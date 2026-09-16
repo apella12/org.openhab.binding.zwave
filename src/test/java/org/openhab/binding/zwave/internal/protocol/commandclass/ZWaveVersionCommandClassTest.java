@@ -14,6 +14,7 @@ package org.openhab.binding.zwave.internal.protocol.commandclass;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.lang.reflect.Field;
 import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,7 @@ import org.openhab.binding.zwave.internal.protocol.transaction.ZWaveCommandClass
 /**
  * Test cases for {@link ZWaveVersionCommandClass}.
  *
- * @author Chris Jackson - Initial version
+ * @author Chris Jackson - Initial contribution
  */
 public class ZWaveVersionCommandClassTest extends ZWaveCommandClassTest {
 
@@ -65,5 +66,36 @@ public class ZWaveVersionCommandClassTest extends ZWaveCommandClassTest {
             assertEquals("1.4", cls.getApplicationVersion());
         } catch (ZWaveSerialMessageException e) {
         }
+    }
+
+    @Test
+    public void processVersionCapabilitiesReportWithBitmask() {
+        ZWaveVersionCommandClass cls = (ZWaveVersionCommandClass) getCommandClass(CommandClass.COMMAND_CLASS_VERSION);
+
+        try {
+            ZWaveCommandClassPayload payload = new ZWaveCommandClassPayload(new byte[] { (byte) 0x86, 0x16, 0x0F });
+            cls.handleVersionCapabilitiesReport(payload, 0);
+
+            Field supportsZWaveSoftwareVersionField = ZWaveVersionCommandClass.class
+                    .getDeclaredField("supportsZWaveSoftwareVersion");
+            supportsZWaveSoftwareVersionField.setAccessible(true);
+            assertTrue((boolean) supportsZWaveSoftwareVersionField.get(cls));
+        } catch (ReflectiveOperationException e) {
+            fail(e);
+        }
+    }
+
+    @Test
+    public void processVersionZWaveSoftwareVersionReport() {
+        ZWaveVersionCommandClass cls = (ZWaveVersionCommandClass) getCommandClass(CommandClass.COMMAND_CLASS_VERSION);
+
+        ZWaveCommandClassPayload capabilitiesPayload = new ZWaveCommandClassPayload(new byte[] { (byte) 0x86, 0x16, 0x07 });
+        cls.handleVersionCapabilitiesReport(capabilitiesPayload, 0);
+
+        ZWaveCommandClassPayload payload = new ZWaveCommandClassPayload(new byte[] { (byte) 0x86, 0x18, 0x07, 0x0D, 0x09, 0x0A, 0x0D,
+                0x09, 0x01, (byte) 0x9E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x0D, 0x09, 0x01, (byte) 0x9E, 0x0A, 0x00, 0x01,
+                (byte) 0xAA, (byte) 0xBB });
+        cls.handleVersionZWaveSoftwareReport(payload, 0);
+        assertEquals("10.0.1", cls.getApplicationVersion());
     }
 }

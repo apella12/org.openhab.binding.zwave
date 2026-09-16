@@ -1244,6 +1244,10 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
         nodeSerializer.deleteNode(node.getHomeId(), nodeId);
 
         controllerHandler.reinitialiseNode(nodeId);
+
+        // Re-interview also wiped the staged firmware file; re-queue a lower-version-probe
+        // lookup so it gets restored once the node properties are available again.
+        scheduleStartupRemoteFirmwareLookup();
         return "Re-interview started for node " + nodeId;
     }
 
@@ -2002,8 +2006,11 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
         if (node.getDeviceId() != Integer.MAX_VALUE) {
             properties.put(ZWaveBindingConstants.PROPERTY_DEVICEID, Integer.toString(node.getDeviceId()));
         }
-        properties.put(ZWaveBindingConstants.PROPERTY_VERSION, node.getApplicationVersion());
-        properties.put(Thing.PROPERTY_FIRMWARE_VERSION, node.getApplicationVersion());
+
+        // Both need updating for firmware UI matching, Property_Version From Discovery could be stale
+        String firmwareVersion = node.getApplicationVersion();
+        properties.put(ZWaveBindingConstants.PROPERTY_VERSION, firmwareVersion);
+        properties.put(Thing.PROPERTY_FIRMWARE_VERSION, firmwareVersion);
 
         properties.put(ZWaveBindingConstants.PROPERTY_CLASS_BASIC,
                 node.getDeviceClass().getBasicDeviceClass().toString());

@@ -159,6 +159,11 @@ public class ZWaveLocalFirmwareProvider implements FirmwareProvider {
         String fileName = file.getFileName().toString();
         String version = extractVersion(fileName);
 
+        String currentVersion = thing.getProperties().get(ZWaveBindingConstants.PROPERTY_VERSION);
+        if (currentVersion != null && !currentVersion.isBlank()) {
+            version = padVersionToMatch(version, currentVersion);
+        }
+
         try {
             InputStream inputStream = Files.newInputStream(file);
             return FirmwareBuilder.create(thing.getThingTypeUID(), version)
@@ -206,6 +211,27 @@ public class ZWaveLocalFirmwareProvider implements FirmwareProvider {
 
     private static boolean isVersionPatternMatchingEnabled() {
         return VERSION_PATTERN_MATCHING_ENABLED;
+    }
+
+    /**
+     * Pads {@code version} with trailing segments taken from {@code currentVersion} when it has fewer
+     * segments (e.g. a filename-derived "1.20" vs a node reporting "1.20.1"), so the missing precision
+     * isn't misread by openHAB Core as a downgrade.
+     */
+    private static String padVersionToMatch(String version, String currentVersion) {
+        String[] versionParts = version.trim().split("\\.");
+        String[] currentParts = currentVersion.trim().split("\\.");
+        if (versionParts.length >= currentParts.length) {
+            return version;
+        }
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < currentParts.length; i++) {
+            if (i > 0) {
+                builder.append('.');
+            }
+            builder.append(i < versionParts.length ? versionParts[i] : currentParts[i]);
+        }
+        return builder.toString();
     }
 
     private static String stripExtension(String fileName) {

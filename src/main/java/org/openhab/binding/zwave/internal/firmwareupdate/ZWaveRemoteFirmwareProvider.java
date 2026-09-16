@@ -203,7 +203,7 @@ public class ZWaveRemoteFirmwareProvider {
             return null;
         }
 
-        return stageRemoteFirmware(thing, nodeId, updateEntry);
+        return stageRemoteFirmware(thing, nodeId, updateEntry, firmwareVersion);
     }
 
     /**
@@ -326,8 +326,9 @@ public class ZWaveRemoteFirmwareProvider {
         return requestBody;
     }
 
-    private @Nullable Set<Firmware> stageRemoteFirmware(Thing thing, int nodeId, JsonObject updateEntry) {
-        String newVersion = updateEntry.get("version").getAsString();
+    private @Nullable Set<Firmware> stageRemoteFirmware(Thing thing, int nodeId, JsonObject updateEntry,
+            String currentVersion) {
+        String newVersion = normalizeRemoteVersion(updateEntry.get("version").getAsString(), currentVersion);
         JsonArray files = updateEntry.getAsJsonArray("files");
         if (files == null || files.isEmpty()) {
             return null;
@@ -546,6 +547,27 @@ public class ZWaveRemoteFirmwareProvider {
             }
         }
         return result;
+    }
+
+    /**
+     * Pads {@code remoteVersion} with trailing segments taken from {@code currentVersion} when the
+     * remote provider reports fewer version segments (e.g. "10.0" vs a node reporting "10.0.1"), so the
+     * missing precision isn't misread by the firmware update service as a downgrade.
+     */
+    private static String normalizeRemoteVersion(String remoteVersion, String currentVersion) {
+        String[] remoteParts = remoteVersion.trim().split("\\.");
+        String[] currentParts = currentVersion.trim().split("\\.");
+        if (remoteParts.length >= currentParts.length) {
+            return remoteVersion;
+        }
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < currentParts.length; i++) {
+            if (i > 0) {
+                builder.append('.');
+            }
+            builder.append(i < remoteParts.length ? remoteParts[i] : currentParts[i]);
+        }
+        return builder.toString();
     }
 
     private static @Nullable JsonObject findTarget(JsonArray files, int target) {
