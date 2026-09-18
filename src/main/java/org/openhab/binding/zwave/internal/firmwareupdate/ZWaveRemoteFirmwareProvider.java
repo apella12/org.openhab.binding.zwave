@@ -84,9 +84,9 @@ public class ZWaveRemoteFirmwareProvider {
     // staged for UI visibility when the current version has no update payload.
     private static final boolean STARTUP_PREFETCH_ALLOW_LOWER_VERSION_PROBE = true;
 
-    private static final long STARTUP_LOOKUP_INITIAL_DELAY_SECONDS = 90;
-    private static final long STARTUP_LOOKUP_INTERVAL_SECONDS = 30;
-    private static final int STARTUP_LOOKUP_NOT_READY_RETRIES = 6;
+    private static final long STARTUP_LOOKUP_INITIAL_DELAY_SECONDS = 10;
+    private static final long STARTUP_LOOKUP_INTERVAL_SECONDS = 10;
+    private static final int STARTUP_LOOKUP_NOT_READY_RETRIES = 3;
 
     private static final ScheduledExecutorService STARTUP_LOOKUP_EXECUTOR = Executors
             .newSingleThreadScheduledExecutor(runnable -> {

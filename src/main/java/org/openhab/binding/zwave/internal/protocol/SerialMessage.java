@@ -508,7 +508,6 @@ public class SerialMessage {
         SendData(0x13, true, true, true), // Send data.
         SendDataMulti(0x14, true, true, true),
         GetVersion(0x15, true, false, false), // Request controller hardware version
-        GetRfRegion(0x97, true, false, false), // Request the controller RF region.
         SendDataAbort(0x16, false, false, false), // Abort Send data.
         RfPowerLevelSet(0x17), // Set RF Power level
         SendDataMeta(0x18),
@@ -561,6 +560,7 @@ public class SerialMessage {
         LockRoute(0x90),
         GetPriorityRoute(0x92),
         SetPriorityRoute(0x93),
+        GetRfRegion(0x97, true, false, false), // Request the controller RF region.
         GetSecurityKeys(0x9C),
         SerialApiSlaveNodeInfo(0xA0), // Set application virtual slave node information
         ApplicationSlaveCommandHandler(0xA1), // Slave command handler

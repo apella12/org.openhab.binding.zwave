@@ -581,8 +581,7 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
         logger.debug("NODE {}: Controller is ONLINE. Starting device initialisation.", nodeId);
 
         // We might not be notified that the controller is online until it's completed a
-        // lot of initialisation, so
-        // make sure we know the device state.
+        // lot of initialisation, so make sure we know the device state.
         ZWaveNode node = bridgeHandler.getNode(nodeId);
         if (node == null) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.NONE, ZWaveBindingConstants.OFFLINE_NODE_NOTFOUND);
@@ -618,8 +617,7 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
         }
 
         // Add the listener for ZWave events.
-        // This ensures we get called whenever there's an event we might be interested
-        // in
+        // This ensures we get called whenever there's an event we of interest.
         if (bridgeHandler.addEventListener(this) == false) {
             logger.warn("NODE {}: Controller failed to register event handler.", nodeId);
             return;
@@ -627,7 +625,6 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
 
         // Initialise the node - create all the channel links
         initialiseNode();
-        scheduleStartupRemoteFirmwareLookup();
         logger.debug("NODE {}: Device initialisation complete.", nodeId);
     }
 
@@ -1245,9 +1242,6 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
 
         controllerHandler.reinitialiseNode(nodeId);
 
-        // Re-interview also wiped the staged firmware file; re-queue a lower-version-probe
-        // lookup so it gets restored once the node properties are available again.
-        scheduleStartupRemoteFirmwareLookup();
         return "Re-interview started for node " + nodeId;
     }
 
@@ -1659,6 +1653,13 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
 
                 case COMMAND_CLASS_VERSION:
                     updateNodeProperties();
+                    // Only probe remote firmware once the full 3-element application version
+                    // (major.minor.patch) is known; the 2-element VERSION_REPORT value is stale
+                    // for devices that support the Z-Wave software version report.
+                    if (event.getValue() instanceof String versionString
+                            && versionString.chars().filter(ch -> ch == '.').count() == 2) {
+                        scheduleStartupRemoteFirmwareLookup();
+                    }
                     break;
 
                 default:

@@ -203,6 +203,11 @@ public class ZWaveVersionCommandClass extends ZWaveCommandClass {
         applicationVersionBuild = ((payload.getPayloadByte(23) & 0xFF) << 8)
                 | (payload.getPayloadByte(24) & 0xFF);
         logger.debug("NODE {}: Application Version Build       = {}", getNode().getNodeId(), applicationVersionBuild);
+
+        // Notify listeners as applicationVersionLong (the long-form application version) arrives here,
+        // after the VERSION_REPORT notification, and would otherwise remain stale on re-interview.
+        getController().notifyEventListeners(new ZWaveCommandClassValueEvent(getNode().getNodeId(), endpoint,
+                CommandClass.COMMAND_CLASS_VERSION, getApplicationVersion()));
     }
 
     /**
