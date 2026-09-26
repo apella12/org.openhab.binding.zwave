@@ -1284,6 +1284,11 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
         return "NODE " + nodeId + " Starting refresh of pollable, linked channels on node";
     }
 
+    /**
+     * Action to Remote Firmware repository updates for this node
+     *
+     * @return a message indicating the result of the remote firmware check
+     */
     public String checkRemoteFirmware() {
         ZWaveNode node = controllerHandler.getNode(nodeId);
         if (node == null) {
@@ -1305,14 +1310,20 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
             if (provider instanceof org.openhab.binding.zwave.internal.firmwareupdate.ZWaveRemoteFirmwareProvider remoteProvider) {
                 java.util.Set<org.openhab.core.thing.binding.firmware.Firmware> firmwares = remoteProvider
                         .refreshFirmware(thing, false);
-                String currentVersion = thing.getProperties().get(ZWaveBindingConstants.PROPERTY_VERSION);
+                String currentVersion = thing.getProperties().get(Thing.PROPERTY_FIRMWARE_VERSION);
+                if (currentVersion == null || currentVersion.isBlank()) {
+                    currentVersion = thing.getProperties().get(ZWaveBindingConstants.PROPERTY_VERSION);
+                }
                 return buildRemoteFirmwareLookupMessage(nodeId, firmwares, null, currentVersion);
             }
 
             return "Remote firmware provider is not available";
         } catch (RuntimeException e) {
             logger.warn("NODE {}: Remote firmware lookup failed: {}", nodeId, e.getMessage(), e);
-            String currentVersion = thing.getProperties().get(ZWaveBindingConstants.PROPERTY_VERSION);
+            String currentVersion = thing.getProperties().get(Thing.PROPERTY_FIRMWARE_VERSION);
+            if (currentVersion == null || currentVersion.isBlank()) {
+                currentVersion = thing.getProperties().get(ZWaveBindingConstants.PROPERTY_VERSION);
+            }
             return buildRemoteFirmwareLookupMessage(nodeId, null, e, currentVersion);
         }
     }
@@ -1341,14 +1352,6 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
     private ZWaveRemoteFirmwareProvider getRemoteFirmwareProvider() {
         return thingRegistry == null ? new ZWaveRemoteFirmwareProvider()
                 : new ZWaveRemoteFirmwareProvider(thingRegistry);
-    }
-
-    private void scheduleStartupRemoteFirmwareLookup() {
-        try {
-            getRemoteFirmwareProvider().scheduleStartupRefresh(getThing());
-        } catch (RuntimeException e) {
-            logger.debug("NODE {}: Failed to enqueue startup remote firmware lookup: {}", nodeId, e.getMessage());
-        }
     }
 
     // End of Actions exposed via the Thing's Action handlers
@@ -1653,13 +1656,6 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
 
                 case COMMAND_CLASS_VERSION:
                     updateNodeProperties();
-                    // Only probe remote firmware once the full 3-element application version
-                    // (major.minor.patch) is known; the 2-element VERSION_REPORT value is stale
-                    // for devices that support the Z-Wave software version report.
-                    if (event.getValue() instanceof String versionString
-                            && versionString.chars().filter(ch -> ch == '.').count() == 2) {
-                        scheduleStartupRemoteFirmwareLookup();
-                    }
                     break;
 
                 default:
@@ -1811,6 +1807,7 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
                 case DONE:
                     updateStatus(ThingStatus.ONLINE);
                     restoreFirmwareUpdateProgressStatusIfNeeded();
+                    requestLegacyVersionRefresh();
                     scheduleStartupRemoteFirmwareLookup();
                     break;
                 default:
@@ -1954,6 +1951,50 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
         }
     }
 
+    /**
+     * This is to smooth the transition between FW binding versions.  Nodes already 
+     * includedprior to this binding version are capped at Firmware Update CC version 1 
+     * and Version CC version 2. At startup this method will update these CCs.
+     * This is a shortcut to avoid a full re-interview and allow firmware updates and
+     * the Remote repository to work correctly right away (possible patch element).
+     */
+    private void requestLegacyVersionRefresh() {
+        if (controllerHandler == null) {
+            return;
+        }
+
+        ZWaveNode node = controllerHandler.getNode(nodeId);
+        if (node == null) {
+            return;
+        }
+
+        ZWaveVersionCommandClass versionCommandClass = (ZWaveVersionCommandClass) node
+                .getCommandClass(CommandClass.COMMAND_CLASS_VERSION);
+        if (versionCommandClass == null) {
+            return;
+        }
+
+        ZWaveFirmwareUpdateCommandClass firmwareCommandClass = (ZWaveFirmwareUpdateCommandClass) node
+                .getCommandClass(CommandClass.COMMAND_CLASS_FIRMWARE_UPDATE_MD);
+        if (firmwareCommandClass != null && firmwareCommandClass.getVersion() == 1) {
+            ZWaveCommandClassTransactionPayload message = versionCommandClass.checkVersion(firmwareCommandClass);
+            if (message != null) {
+                node.sendMessage(message);
+                logger.debug("NODE {}: Requested Firmware Update command class version refresh", nodeId);
+            }
+            node.sendMessage(versionCommandClass.getVersionMessage());
+            logger.debug("NODE {}: Requested Version command class refresh to obtain full application version", nodeId);
+        }
+    }
+
+    private void scheduleStartupRemoteFirmwareLookup() {
+        try {
+            getRemoteFirmwareProvider().scheduleStartupRefresh(getThing());
+        } catch (RuntimeException e) {
+            logger.debug("NODE {}: Failed to enqueue startup remote firmware lookup: {}", nodeId, e.getMessage());
+        }
+    }
+
     private void updateNodeNeighbours() {
         if (controllerHandler == null) {
             logger.debug("NODE {}: Updating node neighbours. Controller not found.", nodeId);
@@ -2008,9 +2049,7 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
             properties.put(ZWaveBindingConstants.PROPERTY_DEVICEID, Integer.toString(node.getDeviceId()));
         }
 
-        // Both need updating for firmware UI matching, Property_Version From Discovery could be stale
         String firmwareVersion = node.getApplicationVersion();
-        properties.put(ZWaveBindingConstants.PROPERTY_VERSION, firmwareVersion);
         properties.put(Thing.PROPERTY_FIRMWARE_VERSION, firmwareVersion);
 
         properties.put(ZWaveBindingConstants.PROPERTY_CLASS_BASIC,
@@ -2305,7 +2344,7 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
         this.firmwareProgressCallback = activeProgressCallback;
 
         String result = startFirmwareUpdateSession();
-        if (!result.startsWith("Firmware upload started")) {
+        if (!result.startsWith("Firmware update started")) {
             logger.warn("NODE {}: Firmware update failed: {}", nodeId, result);
             ProgressCallback callbackRef = activeProgressCallback;
             keepCallbackIfUsable(callbackRef, "failed()",
@@ -2409,13 +2448,6 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
             return "Firmware Update Metadata command class not supported on node";
         }
 
-        // Request a version refresh to ensure we have the latest CC version information
-        // before we try to update. Previously included devices were set to Version 1,
-        // so this avoids a full device reinitialization.
-        // There are compatibility issues between version 1 and later versions of the
-        // Firmware Update CC, so knowing the device CC version is critical.
-        requestFirmwareUpdateVersionRefresh(node, fw);
-
         if (pendingFirmwareBytes == null || pendingFirmwareBytes.length == 0) {
             return "No firmware available";
         }
@@ -2428,9 +2460,13 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
         updateStatus(ThingStatus.ONLINE, ThingStatusDetail.CONFIGURATION_PENDING, "Firmware upload in progress (0%)");
         firmwareSession.start();
 
-        return "Firmware upload started, check status for progress";
+        return "Firmware update started, check status for progress";
     }
 
+    /**
+     * Checks if a firmware update can be executed for this thing.
+     * @see org.openhab.core.thing.binding.firmware.FirmwareUpdateHandler#isUpdateExecutable()
+     */
     @Override
     public boolean isUpdateExecutable() {
         if (getThing().getStatus() != ThingStatus.ONLINE) {
@@ -2443,34 +2479,6 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
         }
 
         return firmwareSession == null || !firmwareSession.isActive();
-    }
-
-    private void requestFirmwareUpdateVersionRefresh(ZWaveNode node,
-            ZWaveFirmwareUpdateCommandClass firmwareCommandClass) {
-        int versionBefore = firmwareCommandClass.getVersion();
-        if (versionBefore != 1) {
-            logger.debug(
-                    "NODE {}: Skipping Firmware Update command class version refresh because current version is {} (refresh is only needed for legacy version 1)",
-                    nodeId, versionBefore);
-            return;
-        }
-
-        ZWaveVersionCommandClass versionCommandClass = (ZWaveVersionCommandClass) node
-                .getCommandClass(CommandClass.COMMAND_CLASS_VERSION);
-        if (versionCommandClass == null) {
-            logger.debug(
-                    "NODE {}: Cannot refresh Firmware Update command class version because VERSION CC is unavailable",
-                    nodeId);
-            return;
-        }
-
-        ZWaveCommandClassTransactionPayload message = versionCommandClass.checkVersion(firmwareCommandClass);
-        if (message == null) {
-            return;
-        }
-
-        node.sendMessage(message);
-        logger.debug("NODE {}: Requested Firmware Update command class version refresh", nodeId);
     }
 
     private boolean isFirmwareSessionActive() {

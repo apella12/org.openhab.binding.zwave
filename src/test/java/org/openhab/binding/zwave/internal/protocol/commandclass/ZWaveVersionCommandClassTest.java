@@ -89,6 +89,12 @@ public class ZWaveVersionCommandClassTest extends ZWaveCommandClassTest {
     public void processVersionZWaveSoftwareVersionReport() {
         ZWaveVersionCommandClass cls = (ZWaveVersionCommandClass) getCommandClass(CommandClass.COMMAND_CLASS_VERSION);
 
+        // getApplicationVersion() only trusts applicationVersionLong when its major.minor matches
+        // the VERSION_REPORT applicationVersion, so that must be populated first.
+        ZWaveCommandClassPayload versionPayload = new ZWaveCommandClassPayload(
+                new byte[] { (byte) 0x86, 0x12, 0x03, 0x03, 0x14, 0x0A, 0x00 });
+        cls.handleVersionReport(versionPayload, 0);
+
         ZWaveCommandClassPayload capabilitiesPayload = new ZWaveCommandClassPayload(new byte[] { (byte) 0x86, 0x16, 0x07 });
         cls.handleVersionCapabilitiesReport(capabilitiesPayload, 0);
 

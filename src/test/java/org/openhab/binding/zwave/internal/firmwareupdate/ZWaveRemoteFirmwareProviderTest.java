@@ -81,6 +81,19 @@ public class ZWaveRemoteFirmwareProviderTest {
         return (String) method.invoke(null, firmwareVersion);
     }
 
+    private String invokeGetCurrentFirmwareVersion(Thing thing) throws Exception {
+        Method method = ZWaveRemoteFirmwareProvider.class.getDeclaredMethod("getCurrentFirmwareVersion", Thing.class);
+        method.setAccessible(true);
+        return (String) method.invoke(null, thing);
+    }
+
+    private String invokeNormalizeRemoteVersion(String remoteVersion, String currentVersion) throws Exception {
+        Method method = ZWaveRemoteFirmwareProvider.class.getDeclaredMethod("normalizeRemoteVersion", String.class,
+                String.class);
+        method.setAccessible(true);
+        return (String) method.invoke(null, remoteVersion, currentVersion);
+    }
+
     private JsonObject invokeBuildRequestBody(String manufacturerId, String productType, String productId,
             String firmwareVersion, @Nullable String region) throws Exception {
         Method method = ZWaveRemoteFirmwareProvider.class.getDeclaredMethod("buildRequestBody", String.class,
@@ -313,6 +326,25 @@ public class ZWaveRemoteFirmwareProviderTest {
         assertEquals("2.39", invokeGetStartupPrefetchLookupFirmwareVersion("2.40"));
         assertEquals("1.19", invokeGetStartupPrefetchLookupFirmwareVersion("1.20"));
         assertEquals("1.19.0", invokeGetStartupPrefetchLookupFirmwareVersion("1.20.0"));
+    }
+
+    @Test
+    public void testRemoteFirmwareVersionUsesFullCurrentVersionForPadding() throws Exception {
+        Thing thing = Mockito.mock(Thing.class);
+        Mockito.when(thing.getProperties()).thenReturn(Map.of(Thing.PROPERTY_FIRMWARE_VERSION, "9.8.1",
+                ZWaveBindingConstants.PROPERTY_VERSION, "9.0"));
+
+        String currentVersion = invokeGetCurrentFirmwareVersion(thing);
+        assertEquals("9.8.1", currentVersion);
+        assertEquals("9.8.1", invokeNormalizeRemoteVersion("9.8", currentVersion));
+    }
+
+    @Test
+    public void testRemoteFirmwareVersionFallsBackToDiscoveryVersion() throws Exception {
+        Thing thing = Mockito.mock(Thing.class);
+        Mockito.when(thing.getProperties()).thenReturn(Map.of(ZWaveBindingConstants.PROPERTY_VERSION, "9.0"));
+
+        assertEquals("9.0", invokeGetCurrentFirmwareVersion(thing));
     }
 
     @Test

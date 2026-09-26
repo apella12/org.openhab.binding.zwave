@@ -16,9 +16,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Map;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.openhab.binding.zwave.ZWaveBindingConstants;
+import org.openhab.core.thing.Thing;
 
 /**
  * Unit tests for Z-Wave local firmware version extraction from filenames.
@@ -36,6 +40,19 @@ public class ZWaveLocalFirmwareProviderTest {
         Method method = ZWaveLocalFirmwareProvider.class.getDeclaredMethod("extractVersion", String.class);
         method.setAccessible(true);
         return (String) method.invoke(null, fileName);
+    }
+
+    private String currentFirmwareVersion(Thing thing) throws Exception {
+        Method method = ZWaveLocalFirmwareProvider.class.getDeclaredMethod("getCurrentFirmwareVersion", Thing.class);
+        method.setAccessible(true);
+        return (String) method.invoke(null, thing);
+    }
+
+    private String padVersionToMatch(String version, String currentVersion) throws Exception {
+        Method method = ZWaveLocalFirmwareProvider.class.getDeclaredMethod("padVersionToMatch", String.class,
+                String.class);
+        method.setAccessible(true);
+        return (String) method.invoke(null, version, currentVersion);
     }
 
     private boolean isVersionPatternMatchingEnabled() throws Exception {
@@ -68,5 +85,23 @@ public class ZWaveLocalFirmwareProviderTest {
     @Test
     public void testExtractVersionFallsBackToBaseFilename() throws Exception {
         assertEquals("ZEN73_firmware_candidate", extractVersion("ZEN73_firmware_candidate.gbl"));
+    }
+
+    @Test
+    public void testLocalFirmwareVersionUsesFullCurrentVersionForPadding() throws Exception {
+        Thing thing = Mockito.mock(Thing.class);
+        Mockito.when(thing.getProperties()).thenReturn(Map.of(Thing.PROPERTY_FIRMWARE_VERSION, "9.8.1",
+                ZWaveBindingConstants.PROPERTY_VERSION, "9.0"));
+
+        assertEquals("9.8.1", currentFirmwareVersion(thing));
+        assertEquals("9.8.1", padVersionToMatch("9.8", currentFirmwareVersion(thing)));
+    }
+
+    @Test
+    public void testLocalFirmwareVersionFallsBackToDiscoveryVersion() throws Exception {
+        Thing thing = Mockito.mock(Thing.class);
+        Mockito.when(thing.getProperties()).thenReturn(Map.of(ZWaveBindingConstants.PROPERTY_VERSION, "9.0"));
+
+        assertEquals("9.0", currentFirmwareVersion(thing));
     }
 }

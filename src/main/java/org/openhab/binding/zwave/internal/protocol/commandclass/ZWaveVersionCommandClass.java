@@ -67,6 +67,7 @@ public class ZWaveVersionCommandClass extends ZWaveCommandClass {
     private String zWaveProtocolVersion;
     private Integer zWaveProtocolBuild;
     private String applicationVersionLong;
+    private String applicationVersionLongShort;
     private Integer applicationVersionBuild;
 
     /**
@@ -199,6 +200,8 @@ public class ZWaveVersionCommandClass extends ZWaveCommandClass {
         applicationVersionLong = Integer.valueOf(payload.getPayloadByte(20)) + "."
                 + Integer.valueOf(payload.getPayloadByte(21)) + "."
                 + Integer.valueOf(payload.getPayloadByte(22));
+        applicationVersionLongShort = Integer.valueOf(payload.getPayloadByte(20)) + "."
+                + Integer.valueOf(payload.getPayloadByte(21));
         logger.debug("NODE {}: Application Version Long        = {}", getNode().getNodeId(), applicationVersionLong);
         applicationVersionBuild = ((payload.getPayloadByte(23) & 0xFF) << 8)
                 | (payload.getPayloadByte(24) & 0xFF);
@@ -304,11 +307,12 @@ public class ZWaveVersionCommandClass extends ZWaveCommandClass {
     /**
      * Returns the version of the ZWave firmware used by the device
      * Either as double or triple depending on the device capabilities.
+     * Filters out bad data that may be reported by the device.
      *
      * @return Version (version . subversion . (patch))
      */
     public String getApplicationVersion() {
-        if (supportsZWaveSoftwareVersion) {
+        if (supportsZWaveSoftwareVersion && (applicationVersionLongShort.equals(applicationVersion))) {
             return applicationVersionLong;
         }
         else {
@@ -319,7 +323,6 @@ public class ZWaveVersionCommandClass extends ZWaveCommandClass {
     /**
      * Returns the triple version of the firmware used by the device
      * Only available if the device supports the Z-Wave software version.
-     * Only element currently used in Z-Wave software version report.
      *
      * @return Application version as triple (version . subversion . patch)
      */

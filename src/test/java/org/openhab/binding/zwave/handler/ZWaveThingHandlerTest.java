@@ -559,7 +559,8 @@ public class ZWaveThingHandlerTest {
     public void testVersionValueEventRefreshesFirmwareProperties() {
         ThingType thingType = ThingTypeBuilder.instance("bindingId", "thingTypeId", "label").build();
         Thing thing = ThingBuilder.create(thingType.getUID(), new ThingUID(thingType.getUID(), "thingId"))
-                .withConfiguration(new Configuration()).build();
+                .withConfiguration(new Configuration())
+                .withProperties(Map.of(ZWaveBindingConstants.PROPERTY_VERSION, "9.0")).build();
 
         ZWaveThingHandlerPropertiesCaptureTest handler = new ZWaveThingHandlerPropertiesCaptureTest(thing);
         ZWaveControllerHandler controllerHandler = Mockito.mock(ZWaveControllerHandler.class);
@@ -597,7 +598,7 @@ public class ZWaveThingHandlerTest {
         handler.ZWaveIncomingEvent(new ZWaveCommandClassValueEvent(12, 0, CommandClass.COMMAND_CLASS_VERSION, "9.8"));
 
         Map<String, String> properties = handler.getCapturedProperties();
-        assertEquals("9.8", properties.get(ZWaveBindingConstants.PROPERTY_VERSION));
+        assertEquals("9.0", properties.get(ZWaveBindingConstants.PROPERTY_VERSION));
         assertEquals("9.8", properties.get(Thing.PROPERTY_FIRMWARE_VERSION));
     }
 }

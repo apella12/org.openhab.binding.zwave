@@ -159,7 +159,7 @@ public class ZWaveLocalFirmwareProvider implements FirmwareProvider {
         String fileName = file.getFileName().toString();
         String version = extractVersion(fileName);
 
-        String currentVersion = thing.getProperties().get(ZWaveBindingConstants.PROPERTY_VERSION);
+        String currentVersion = getCurrentFirmwareVersion(thing);
         if (currentVersion != null && !currentVersion.isBlank()) {
             version = padVersionToMatch(version, currentVersion);
         }
@@ -232,6 +232,14 @@ public class ZWaveLocalFirmwareProvider implements FirmwareProvider {
             builder.append(i < versionParts.length ? versionParts[i] : currentParts[i]);
         }
         return builder.toString();
+    }
+
+    private static @Nullable String getCurrentFirmwareVersion(Thing thing) {
+        String currentVersion = thing.getProperties().get(Thing.PROPERTY_FIRMWARE_VERSION);
+        if (currentVersion == null || currentVersion.isBlank()) {
+            return thing.getProperties().get(ZWaveBindingConstants.PROPERTY_VERSION);
+        }
+        return currentVersion;
     }
 
     private static String stripExtension(String fileName) {

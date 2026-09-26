@@ -165,7 +165,7 @@ public class ZWaveRemoteFirmwareProvider {
         String manufacturerId = readHexProperty(thing, ZWaveBindingConstants.PROPERTY_MANUFACTURER);
         String productType = readHexProperty(thing, ZWaveBindingConstants.PROPERTY_DEVICETYPE);
         String productId = readHexProperty(thing, ZWaveBindingConstants.PROPERTY_DEVICEID);
-        String firmwareVersion = thing.getProperties().get(ZWaveBindingConstants.PROPERTY_VERSION);
+        String firmwareVersion = getCurrentFirmwareVersion(thing);
 
         if (manufacturerId == null || productType == null || productId == null || firmwareVersion == null) {
             logger.debug("NODE {}: Missing device properties for remote firmware lookup", nodeId);
@@ -896,11 +896,19 @@ public class ZWaveRemoteFirmwareProvider {
         return null;
     }
 
+    private static @Nullable String getCurrentFirmwareVersion(Thing thing) {
+        String firmwareVersion = thing.getProperties().get(Thing.PROPERTY_FIRMWARE_VERSION);
+        if (firmwareVersion == null || firmwareVersion.isBlank()) {
+            return thing.getProperties().get(ZWaveBindingConstants.PROPERTY_VERSION);
+        }
+        return firmwareVersion;
+    }
+
     private static boolean hasLookupFingerprint(Thing thing) {
         return readNodeId(thing) != null && readHexProperty(thing, ZWaveBindingConstants.PROPERTY_MANUFACTURER) != null
                 && readHexProperty(thing, ZWaveBindingConstants.PROPERTY_DEVICETYPE) != null
                 && readHexProperty(thing, ZWaveBindingConstants.PROPERTY_DEVICEID) != null
-                && thing.getProperties().get(ZWaveBindingConstants.PROPERTY_VERSION) != null;
+                && getCurrentFirmwareVersion(thing) != null;
     }
 
     private static void scheduleStartupLookupWorker(long delaySeconds) {
