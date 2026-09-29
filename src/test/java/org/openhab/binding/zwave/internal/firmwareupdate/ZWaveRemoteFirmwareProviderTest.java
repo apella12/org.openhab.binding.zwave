@@ -331,8 +331,8 @@ public class ZWaveRemoteFirmwareProviderTest {
     @Test
     public void testRemoteFirmwareVersionUsesFullCurrentVersionForPadding() throws Exception {
         Thing thing = Mockito.mock(Thing.class);
-        Mockito.when(thing.getProperties()).thenReturn(Map.of(Thing.PROPERTY_FIRMWARE_VERSION, "9.8.1",
-                ZWaveBindingConstants.PROPERTY_VERSION, "9.0"));
+        Mockito.when(thing.getProperties()).thenReturn(
+                Map.of(Thing.PROPERTY_FIRMWARE_VERSION, "9.8.1", ZWaveBindingConstants.PROPERTY_VERSION, "9.0"));
 
         String currentVersion = invokeGetCurrentFirmwareVersion(thing);
         assertEquals("9.8.1", currentVersion);

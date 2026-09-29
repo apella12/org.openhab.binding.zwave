@@ -47,7 +47,7 @@ public class ZWaveFirmwareUpdateCommandClass extends ZWaveCommandClass {
     @XStreamOmitField
     private static final Logger logger = LoggerFactory.getLogger(ZWaveFirmwareUpdateCommandClass.class);
     // Maximum tested is version 5, CC structure in place for up to 8,
-    //  but no Session handling implemented. (extract firmware from device)
+    // but no Session handling implemented. (extract firmware from device)
     private static final int MAX_SUPPORTED_VERSION = 5;
     private static final int CRC16_CCITT_INITIAL = 0x1D0F;
 

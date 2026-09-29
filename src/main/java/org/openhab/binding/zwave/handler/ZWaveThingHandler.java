@@ -1952,8 +1952,8 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
     }
 
     /**
-     * This is to smooth the transition between FW binding versions.  Nodes already 
-     * includedprior to this binding version are capped at Firmware Update CC version 1 
+     * This is to smooth the transition between FW binding versions. Nodes already
+     * included prior to this binding version are capped at Firmware Update CC version 1
      * and Version CC version 2. At startup this method will update these CCs.
      * This is a shortcut to avoid a full re-interview and allow firmware updates and
      * the Remote repository to work correctly right away (possible patch element).
@@ -2050,6 +2050,7 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
         }
 
         String firmwareVersion = node.getApplicationVersion();
+        properties.put(ZWaveBindingConstants.PROPERTY_VERSION, firmwareVersion);
         properties.put(Thing.PROPERTY_FIRMWARE_VERSION, firmwareVersion);
 
         properties.put(ZWaveBindingConstants.PROPERTY_CLASS_BASIC,
@@ -2465,6 +2466,7 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
 
     /**
      * Checks if a firmware update can be executed for this thing.
+     * 
      * @see org.openhab.core.thing.binding.firmware.FirmwareUpdateHandler#isUpdateExecutable()
      */
     @Override

@@ -75,7 +75,6 @@ import com.google.gson.JsonObject;
  */
 @NonNullByDefault
 public class ZWaveRemoteFirmwareProvider {
-
     private final Logger logger = LoggerFactory.getLogger(ZWaveRemoteFirmwareProvider.class);
 
     private static final String API_URL = "https://firmware.zwave-js.io/api/v4/updates";

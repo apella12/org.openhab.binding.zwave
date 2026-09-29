@@ -15,6 +15,7 @@ package org.openhab.binding.zwave.internal.protocol.commandclass;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.binding.zwave.internal.protocol.ZWaveCommandClassPayload;
 import org.openhab.binding.zwave.internal.protocol.ZWaveController;
 import org.openhab.binding.zwave.internal.protocol.ZWaveEndpoint;
@@ -32,8 +33,8 @@ import com.thoughtworks.xstream.annotations.XStreamOmitField;
 /**
  * Handles the Version command class. The Version Command Class is used to obtain the library type, the protocol version
  * used by the node, the individual command class versions used by the node and the vendor specific application version
- * from a device.
- *
+ * New fields omitted and applicationVersion overwritten for backward compatibility.
+ * 
  * @author Chris Jackson - Initial contribution
  * @author Jan-Willem Spuij - Contributor
  * @author Robert Eckhoff - Upgrade to version 3
@@ -58,16 +59,27 @@ public class ZWaveVersionCommandClass extends ZWaveCommandClass {
     private String protocolVersion;
     private String applicationVersion;
     private Integer hardwareVersion;
+    @XStreamOmitField
     private boolean supportsZWaveSoftwareVersion = false;
+    @XStreamOmitField
     private String sdkVersion;
+    @XStreamOmitField
     private String applicationFrameworkAPIVersion;
+    @XStreamOmitField
     private Integer applicationFrameworkBuild;
+    @XStreamOmitField
     private String hostInterfaceVersion;
+    @XStreamOmitField
     private Integer hostInterfaceBuild;
+    @XStreamOmitField
     private String zWaveProtocolVersion;
+    @XStreamOmitField
     private Integer zWaveProtocolBuild;
+    @XStreamOmitField
     private String applicationVersionLong;
+    @XStreamOmitField
     private String applicationVersionLongShort;
+    @XStreamOmitField
     private Integer applicationVersionBuild;
 
     /**
@@ -79,6 +91,13 @@ public class ZWaveVersionCommandClass extends ZWaveCommandClass {
      */
     public ZWaveVersionCommandClass(ZWaveNode node, ZWaveController controller, ZWaveEndpoint endpoint) {
         super(node, controller, endpoint);
+        versionMax = MAX_SUPPORTED_VERSION;
+    }
+
+    @Override
+    public void initialise(@Nullable ZWaveNode node, @Nullable ZWaveController controller,
+            @Nullable ZWaveEndpoint endpoint) {
+        super.initialise(node, controller, endpoint);
         versionMax = MAX_SUPPORTED_VERSION;
     }
 
@@ -164,6 +183,7 @@ public class ZWaveVersionCommandClass extends ZWaveCommandClass {
         // the low 3 bits being set (0b00000111), not by the entire byte equaling 7.
         supportsZWaveSoftwareVersion = (payload.getPayloadByte(2) & 0x07) == 0x07;
         if (supportsZWaveSoftwareVersion) {
+            setVersion(MAX_SUPPORTED_VERSION);
             logger.debug("NODE {}: Z-Wave Software Version is supported", getNode().getNodeId());
             getNode().sendMessage(getVersionZWaveSoftwareMessage());
         }
@@ -172,40 +192,36 @@ public class ZWaveVersionCommandClass extends ZWaveCommandClass {
     @ZWaveResponseHandler(id = VERSION_ZWAVE_SOFTWARE_REPORT, name = "VERSION_ZWAVE_SOFTWARE_REPORT")
     public void handleVersionZWaveSoftwareReport(ZWaveCommandClassPayload payload, int endpoint) {
         logger.debug("NODE {}: Processing VERSION_ZWAVE_SOFTWARE_REPORT", getNode().getNodeId());
-        sdkVersion = Integer.toString(payload.getPayloadByte(2)) + "."
-                + Integer.toString(payload.getPayloadByte(3)) + "."
-                + Integer.toString(payload.getPayloadByte(4));
+        sdkVersion = Integer.toString(payload.getPayloadByte(2)) + "." + Integer.toString(payload.getPayloadByte(3))
+                + "." + Integer.toString(payload.getPayloadByte(4));
         logger.debug("NODE {}: SDK Version                  = {}", getNode().getNodeId(), sdkVersion);
         applicationFrameworkAPIVersion = Integer.toString(payload.getPayloadByte(5)) + "."
-                + Integer.toString(payload.getPayloadByte(6)) + "."
-                + Integer.toString(payload.getPayloadByte(7));
-        logger.debug("NODE {}: Application Framework API Version = {}", getNode().getNodeId(), applicationFrameworkAPIVersion);
-        applicationFrameworkBuild = ((payload.getPayloadByte(8) & 0xFF) << 8)
-                | (payload.getPayloadByte(9) & 0xFF);
+                + Integer.toString(payload.getPayloadByte(6)) + "." + Integer.toString(payload.getPayloadByte(7));
+        logger.debug("NODE {}: Application Framework API Version = {}", getNode().getNodeId(),
+                applicationFrameworkAPIVersion);
+        applicationFrameworkBuild = ((payload.getPayloadByte(8) & 0xFF) << 8) | (payload.getPayloadByte(9) & 0xFF);
         logger.debug("NODE {}: Application Framework Build     = {}", getNode().getNodeId(), applicationFrameworkBuild);
         hostInterfaceVersion = Integer.toString(payload.getPayloadByte(10)) + "."
-                + Integer.toString(payload.getPayloadByte(11)) + "."
-                + Integer.toString(payload.getPayloadByte(12));
+                + Integer.toString(payload.getPayloadByte(11)) + "." + Integer.toString(payload.getPayloadByte(12));
         logger.debug("NODE {}: Host Interface Version          = {}", getNode().getNodeId(), hostInterfaceVersion);
-        hostInterfaceBuild = ((payload.getPayloadByte(13) & 0xFF) << 8)
-                | (payload.getPayloadByte(14) & 0xFF);
+        hostInterfaceBuild = ((payload.getPayloadByte(13) & 0xFF) << 8) | (payload.getPayloadByte(14) & 0xFF);
         logger.debug("NODE {}: Host Interface Build           = {}", getNode().getNodeId(), hostInterfaceBuild);
         zWaveProtocolVersion = Integer.toString(payload.getPayloadByte(15)) + "."
-                + Integer.toString(payload.getPayloadByte(16)) + "."
-                + Integer.toString(payload.getPayloadByte(17));
+                + Integer.toString(payload.getPayloadByte(16)) + "." + Integer.toString(payload.getPayloadByte(17));
         logger.debug("NODE {}: Z-Wave Protocol Version        = {}", getNode().getNodeId(), zWaveProtocolVersion);
-        zWaveProtocolBuild = ((payload.getPayloadByte(18) & 0xFF) << 8)
-                | (payload.getPayloadByte(19) & 0xFF);
+        zWaveProtocolBuild = ((payload.getPayloadByte(18) & 0xFF) << 8) | (payload.getPayloadByte(19) & 0xFF);
         logger.debug("NODE {}: Z-Wave Protocol Build           = {}", getNode().getNodeId(), zWaveProtocolBuild);
         applicationVersionLong = Integer.valueOf(payload.getPayloadByte(20)) + "."
-                + Integer.valueOf(payload.getPayloadByte(21)) + "."
-                + Integer.valueOf(payload.getPayloadByte(22));
+                + Integer.valueOf(payload.getPayloadByte(21)) + "." + Integer.valueOf(payload.getPayloadByte(22));
         applicationVersionLongShort = Integer.valueOf(payload.getPayloadByte(20)) + "."
                 + Integer.valueOf(payload.getPayloadByte(21));
         logger.debug("NODE {}: Application Version Long        = {}", getNode().getNodeId(), applicationVersionLong);
-        applicationVersionBuild = ((payload.getPayloadByte(23) & 0xFF) << 8)
-                | (payload.getPayloadByte(24) & 0xFF);
+        applicationVersionBuild = ((payload.getPayloadByte(23) & 0xFF) << 8) | (payload.getPayloadByte(24) & 0xFF);
         logger.debug("NODE {}: Application Version Build       = {}", getNode().getNodeId(), applicationVersionBuild);
+        // Override the application version with the long-form version if supported and applicable
+        if (supportsZWaveSoftwareVersion && applicationVersionLongShort.equals(applicationVersion)) {
+            applicationVersion = applicationVersionLong;
+        }
 
         // Notify listeners as applicationVersionLong (the long-form application version) arrives here,
         // after the VERSION_REPORT notification, and would otherwise remain stale on re-interview.
@@ -272,8 +288,9 @@ public class ZWaveVersionCommandClass extends ZWaveCommandClass {
     public ZWaveCommandClassTransactionPayload getVersionCapabilitiesMessage() {
         logger.debug("NODE {}: Creating new message for command VERSION_CAPABILITIES_GET", getNode().getNodeId());
 
-        return new ZWaveCommandClassTransactionPayloadBuilder(getNode().getNodeId(), getCommandClass(), VERSION_CAPABILITIES_GET)
-                .withPriority(TransactionPriority.Config).withExpectedResponseCommand(VERSION_CAPABILITIES_REPORT).build();
+        return new ZWaveCommandClassTransactionPayloadBuilder(getNode().getNodeId(), getCommandClass(),
+                VERSION_CAPABILITIES_GET).withPriority(TransactionPriority.Config)
+                .withExpectedResponseCommand(VERSION_CAPABILITIES_REPORT).build();
     }
 
     /**
@@ -284,8 +301,9 @@ public class ZWaveVersionCommandClass extends ZWaveCommandClass {
     public ZWaveCommandClassTransactionPayload getVersionZWaveSoftwareMessage() {
         logger.debug("NODE {}: Creating new message for command VERSION_ZWAVE_SOFTWARE_GET", getNode().getNodeId());
 
-        return new ZWaveCommandClassTransactionPayloadBuilder(getNode().getNodeId(), getCommandClass(), VERSION_ZWAVE_SOFTWARE_GET)
-                .withPriority(TransactionPriority.Config).withExpectedResponseCommand(VERSION_ZWAVE_SOFTWARE_REPORT).build();
+        return new ZWaveCommandClassTransactionPayloadBuilder(getNode().getNodeId(), getCommandClass(),
+                VERSION_ZWAVE_SOFTWARE_GET).withPriority(TransactionPriority.Config)
+                .withExpectedResponseCommand(VERSION_ZWAVE_SOFTWARE_REPORT).build();
     }
 
     /**
@@ -312,22 +330,7 @@ public class ZWaveVersionCommandClass extends ZWaveCommandClass {
      * @return Version (version . subversion . (patch))
      */
     public String getApplicationVersion() {
-        if (supportsZWaveSoftwareVersion && (applicationVersionLongShort.equals(applicationVersion))) {
-            return applicationVersionLong;
-        }
-        else {
-            return applicationVersion;
-        }
-    }
-
-    /**
-     * Returns the triple version of the firmware used by the device
-     * Only available if the device supports the Z-Wave software version.
-     *
-     * @return Application version as triple (version . subversion . patch)
-     */
-    public String getApplicationVersionLong() {
-        return applicationVersionLong;
+        return applicationVersion;
     }
 
     public enum LibraryType {

@@ -598,7 +598,7 @@ public class ZWaveThingHandlerTest {
         handler.ZWaveIncomingEvent(new ZWaveCommandClassValueEvent(12, 0, CommandClass.COMMAND_CLASS_VERSION, "9.8"));
 
         Map<String, String> properties = handler.getCapturedProperties();
-        assertEquals("9.0", properties.get(ZWaveBindingConstants.PROPERTY_VERSION));
+        assertEquals("9.8", properties.get(ZWaveBindingConstants.PROPERTY_VERSION));
         assertEquals("9.8", properties.get(Thing.PROPERTY_FIRMWARE_VERSION));
     }
 }

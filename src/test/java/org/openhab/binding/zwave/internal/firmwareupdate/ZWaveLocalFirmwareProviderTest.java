@@ -90,8 +90,8 @@ public class ZWaveLocalFirmwareProviderTest {
     @Test
     public void testLocalFirmwareVersionUsesFullCurrentVersionForPadding() throws Exception {
         Thing thing = Mockito.mock(Thing.class);
-        Mockito.when(thing.getProperties()).thenReturn(Map.of(Thing.PROPERTY_FIRMWARE_VERSION, "9.8.1",
-                ZWaveBindingConstants.PROPERTY_VERSION, "9.0"));
+        Mockito.when(thing.getProperties()).thenReturn(
+                Map.of(Thing.PROPERTY_FIRMWARE_VERSION, "9.8.1", ZWaveBindingConstants.PROPERTY_VERSION, "9.0"));
 
         assertEquals("9.8.1", currentFirmwareVersion(thing));
         assertEquals("9.8.1", padVersionToMatch("9.8", currentFirmwareVersion(thing)));
