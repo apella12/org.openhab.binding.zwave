@@ -1988,6 +1988,12 @@ public class ZWaveThingHandler extends ConfigStatusThingHandler implements ZWave
     }
 
     private void scheduleStartupRemoteFirmwareLookup() {
+        ZWaveControllerHandler handler = controllerHandler;
+        if (handler == null || !handler.isStartupRemoteFirmwareLookupAllowed()) {
+            logger.debug("NODE {}: Startup remote firmware lookup suppressed for 24 hours", nodeId);
+            return;
+        }
+
         try {
             getRemoteFirmwareProvider().scheduleStartupRefresh(getThing());
         } catch (RuntimeException e) {
